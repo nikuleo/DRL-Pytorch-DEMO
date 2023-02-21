@@ -1,0 +1,13 @@
+**/model
+**/plt
+**/__pycache__
+/.idea
+/codingtest.py
+*.pt
+*.xml
+*.pth
+*.png
+*.txt
+*.ckpt
+*.model
+*.csv

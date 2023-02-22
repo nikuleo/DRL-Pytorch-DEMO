@@ -32,7 +32,7 @@ class Agent():
         """
         self.state_size = state_size
         self.action_size = action_size
-        self.seed = random.seed(seed)
+        self.seed = seed
 
         # Q-Network
         self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)

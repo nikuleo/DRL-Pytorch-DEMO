@@ -10,7 +10,7 @@ BATCH_SIZE = 32
 DECAY = 0.99
 EPSILON_INIT = 0.9
 EPSILON_MIN = 0.05
-MAX_EPISODE = 1e6
+MAX_EPISODE = 100000
 SEQ_LEN = 50
 SOFT_UPDATE_FREQ = 100
 SEED = 2233
@@ -31,7 +31,7 @@ def fix(env, seed):
 def train(env, agent):
     epsilon = EPSILON_INIT
     scores_array, scores_avg = [], []
-    scores_deque = deque(max=100)
+    scores_deque = deque(maxlen=100)
 
     for i_episode in range(1, MAX_EPISODE+1):
         obs = env.reset()
@@ -64,7 +64,7 @@ def train(env, agent):
     return scores_array, scores_avg
 
 def test():
-    env = gym.make("CarPole-v0")
+    env = gym.make("CarPole-v1")
     env.unwrapped
     agent.local_network.load_state_dict(torch.load('model.pth'))
     hidden = None
@@ -80,7 +80,7 @@ def test():
     env.close()
 
 if __name__ == '__main__':
-    env = gym.make('CartPole-v0')
+    env = gym.make('CartPole-v1')
     env = env.unwrapped  # 得到原始环境，不受步数限制
     fix(env, SEED)
     obs_dim = env.observation_space.shape[0]

@@ -63,7 +63,7 @@ def train(pi, optimizer):
 
 
 def main():
-    env = gym.make('CartPole-v0')
+    env = gym.make('CartPole-v1')
     in_dim = env.observation_space.shape[0]
     out_dim = env.action_space.n
     pi = Pi(in_dim, out_dim)

@@ -1,21 +1,25 @@
 import torch
 import gym
 from DRQNAgent import Agent
+from DRQNAgent import EpisodeBuffer
 from collections import deque
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 # Hyperparemeters
-BATCH_SIZE = 32
-DECAY = 0.99
+BATCH_SIZE = 1
+DECAY = 0.998
 EPSILON_INIT = 0.9
 EPSILON_MIN = 0.05
+EXPLORE = 300
+GAMMA = 0.9
 MAX_EPISODE = 100000
 SEQ_LEN = 50
 SOFT_UPDATE_FREQ = 100
 SEED = 2233
-RENDER = True
-MAX_T = 1000
+RENDER = False
+MAX_T = 2000
 
 
 def fix(env, seed):
@@ -34,50 +38,64 @@ def train(env, agent):
     scores_deque = deque(maxlen=100)
 
     for i_episode in range(1, MAX_EPISODE+1):
+        episode_buffer = EpisodeBuffer()
         obs = env.reset()
         hidden = None
         reward_total = 0
         for i in range(MAX_T):
             action, hidden = agent.act(obs, epsilon, hidden)
+            # reward 活着返回1 ，结束返回0
             next_obs, reward, done, _ = env.step(action)
+            done_mask = 0.0 if done else 1.0
+            episode_buffer.add(obs, action, reward, next_obs, done)
             if RENDER:
                 env.render()
-            agent.step(obs, action, reward, next_obs, done)
+            # agent.step(obs, action, reward, next_obs, done_mask, i_episode)
+            if len(agent.buffer) > BATCH_SIZE:
+                experience = agent.buffer.sample()
+                agent.learn(experience, GAMMA, i_episode)
             reward_total += reward
             obs = next_obs
             if done:
                 break
+        agent.buffer.add(episode_buffer)
         scores_array.append(reward_total)
         scores_deque.append(reward_total)
         scores_avg.append(np.mean(scores_deque))
+        # epsilon = EPSILON_MIN + (EPSILON_INIT - EPSILON_MIN) * \
+        #     math.exp((-1*i_episode)/10)
         epsilon = max(EPSILON_MIN, DECAY*epsilon)
         print('\rEpisoid : {}, \tAverage Score : {:.2f}, \teps : {}'.format(
             i_episode, np.mean(scores_deque), epsilon))
         if i_episode % 100 == 0:
             print('\rEpisoid : {}, \tAverage Score : {:.2f}'.format(
                 i_episode, np.mean(scores_deque)))
-        if np.mean(scores_deque) >= 200.0:
+        if np.mean(scores_deque) >= 190:
             print('\n 训练完成, Average Score: {:.2f}'.format(
                 np.mean(scores_deque)))
-            torch.save(agent.qnetwork_local.state_dict(), 'model.pth')
+            torch.save(agent.local_network.state_dict(),
+                       './CartPole-DRQN/model/model.pth')
             break
     return scores_array, scores_avg
 
+
 def test():
-    env = gym.make("CarPole-v1")
+    env = gym.make("CartPole-v1")
     env.unwrapped
-    agent.local_network.load_state_dict(torch.load('model.pth'))
+    agent.local_network.load_state_dict(
+        torch.load('./CartPole-DRQN/model/model.pth'))
     hidden = None
-    for i in range(3):
+    for i in range(20):
         obs = env.reset()
         for j in range(MAX_T):
-            action, hidden= agent.act(obs, 1, hidden)
+            action, hidden = agent.act(obs, 1, hidden)
             plt.axis('off')
             obs, reward, done, _ = env.step(action)
             env.render()
             if done:
                 break
     env.close()
+
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1')
